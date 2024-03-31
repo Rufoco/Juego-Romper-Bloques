@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego Rompe Ladrillos</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            background-color: black;
+        }
+        #juego {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        .barra {
+            position: absolute;
+            width: 100px;
+            height: 20px;
+            bottom: 30px;
+            background-color: white;
+        }
+        .pelota {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: white;
+        }
+        .bloque {
+            width: 60px;
+            height: 20px;
+            background-color: red;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <div id="juego"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const juego = document.getElementById('juego');
+            juego.innerHTML = ''; // Limpiar para reiniciar
+
+            const barra = document.createElement('div');
+            barra.className = 'barra';
+            barra.style.left = '50%';
+            barra.style.transform = 'translateX(-50%)';
+            juego.appendChild(barra);
+
+            const pelota = document.createElement('div');
+            pelota.className = 'pelota';
+            resetPelota();
+
+            // Posición inicial de la pelota
+            function resetPelota() {
+                pelota.style.left = '50%';
+                pelota.style.bottom = '50px';
+                pelota.style.transform = 'translate(-50%, -50%)';
+                juego.appendChild(pelota);
+            }
+
+            let pelotaDX = 2;
+            let pelotaDY = -2;
+            let requestId;
+
+            // Crear bloques
+            const bloquesPorFila = Math.floor(juego.offsetWidth / 64);
+            const filasDeBloques = 5;
+            for (let y = 0; y < filasDeBloques; y++) {
+                for (let x = 0; x < bloquesPorFila; x++) {
+                    const bloque = document.createElement('div');
+                    bloque.className = 'bloque';
+                    bloque.style.left = `${x * 64}px`;
+                    bloque.style.top = `${y * 24}px`;
+                    juego.appendChild(bloque);
+                }
+            }
+
+            // Mover la barra
+            document.addEventListener('mousemove', e => {
+                const juegoRect = juego.getBoundingClientRect();
+                barra.style.left = `${e.clientX - juegoRect.left - (barra.offsetWidth / 2)}px`;
+            });
+
+            function actualizarJuego() {
+                const pelotaRect = pelota.getBoundingClientRect();
+                const barraRect = barra.getBoundingClientRect();
+
+                let nuevoX = pelota.offsetLeft + pelotaDX;
+                let nuevoY = pelota.offsetTop + pelotaDY;
+
+                // Rebote en paredes y techo
+                if (nuevoX < 0 || nuevoX + pelota.offsetWidth > juego.offsetWidth) {
+                    pelotaDX *= -1;
+                }
+                if (nuevoY < 0) {
+                    pelotaDY *= -1;
+                }
+
+                // Rebote en la barra
+                if (nuevoX < barraRect.right && nuevoX + pelota.offsetWidth > barraRect.left &&
+                    nuevoY + pelota.offsetHeight > barraRect.top && nuevoY < barraRect.bottom) {
+                    pelotaDY *= -1;
+                    nuevoY = barra.offsetTop - pelota.offsetHeight - 1; // Ajuste para evitar que la pelota "se pegue" a la barra
+                }
+
+                // Actualizar posición de la pelota
+                pelota.style.left = `${nuevoX}px`;
+                pelota.style.top = `${nuevoY}px`;
+
+                // Final del juego si la pelota toca el fondo
+                if (nuevoY + pelota.offsetHeight > juego.offsetHeight) {
+                    cancelAnimationFrame(requestId);
+                    alert('¡Juego terminado! ¿Quieres jugar de nuevo?');
+                    window.location.reload();
+                    return;
+                }
+
+                // Detección de colisión y eliminación de bloques
+                document.querySelectorAll('.bloque').forEach(bloque => {
+                    const bloqueRect = bloque.getBoundingClientRect();
+                    if (pelotaRect.right > bloqueRect.left && pelotaRect.left < bloqueRect.right &&
+                        pelotaRect.bottom > bloqueRect.top && pelotaRect.top < bloqueRect.bottom) {
+                        juego.removeChild(bloque);
+                        pelotaDY *= -1;
+                    }
+                });
+
+                requestId = requestAnimationFrame(actualizarJuego);
+            }
+
+            requestId = requestAnimationFrame(actualizarJuego);
+        });
+    </script>
+</body>
+</html>
+
